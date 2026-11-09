@@ -6,13 +6,11 @@ H = -J * sum over nearest neighbours of s_i * s_j,  J = 1,  k_B = 1
 Periodic boundary conditions.
 
 Each run = full temperature scan with its own random seed.
-Result = mean over runs, error = standard deviation / sqrt(number of runs).
 Exact answer (Onsager): Tc = 2.269
 """
 
 import math
 import random
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -24,16 +22,16 @@ N_MEAS = 2000             # sweeps for measurements
 N_RUNS = 10               # number of independent runs
 SNAPSHOT_EVERY = 20       # save a copy of the lattice every 20 sweeps
 
-# coarse far from Tc, fine near Tc (from hot to cold)
+# temperature grid: coarse far from Tc, fine near Tc (from hot to cold)
 coarse_hot = np.linspace(3.5, 2.7, 9)      # step 0.1
 fine = np.linspace(2.68, 2.0, 35)          # step 0.02
 coarse_cold = np.linspace(1.9, 1.5, 5)     # step 0.1
 temperatures = np.concatenate([coarse_hot, fine, coarse_cold])
 
 
-# ---------------- Functions ----------------
+# Functions 
 def total_energy(s):
-    """Energy of the whole lattice. Each bond counted once (right + down)."""
+    """Energy of the whole lattice."""
     E = 0
     for i in range(L):
         for j in range(L):
@@ -57,7 +55,7 @@ def sweep(s, T, E, M):
 
 
 def one_run(seed):
-    """One full temperature scan. Returns a table: rows = T, columns = |m|, e, C, chi."""
+    """One full temperature scan. Returns a table: rows = T, columns = |m|, E, C, chi."""
     random.seed(seed)
     s = [[random.choice([-1, 1]) for _ in range(L)] for _ in range(L)]
     E = total_energy(s)
@@ -94,7 +92,7 @@ def one_run(seed):
     return np.array(table), snapshots, snapshot_T
 
 
-# ---------------- Main program: several runs ----------------
+# ---------------- Main program ----------------
 all_runs = []
 for run in range(N_RUNS):
     print(f"Run {run + 1} of {N_RUNS} ...")
@@ -121,8 +119,8 @@ print(f"Tc from peak of chi: {Tc_chi_runs.mean():.3f} +- {Tc_chi_runs.std() / np
 print("Tc exact (Onsager):  2.269")
 
 # ---------------- Save ----------------
-# columns: T, |m|, err, e, err, C, err, chi, err
-order = np.argsort(T_all)                       # from cold to hot
+# columns: T, |m|, err, E, err, C, err, chi, err
+order = np.argsort(T_all)                       
 columns = [T_all]
 for k in range(4):
     columns += [mean[:, k], error[:, k]]
