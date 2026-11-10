@@ -28,5 +28,5 @@ for a in ax:
     a.legend()
 
 fig.tight_layout()
-fig.savefig("ising_sizes.png", dpi=120)
+fig.savefig("figures/ising_sizes.png", dpi=120)
 plt.show()

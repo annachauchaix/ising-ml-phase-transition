@@ -140,5 +140,5 @@ for k, a in enumerate(ax.flat):
     a.legend()
 fig.suptitle(f"2D Ising model, L = {L}, mean of {N_RUNS} runs")
 fig.tight_layout()
-fig.savefig(f"ising_L{L}.png", dpi=120)
+fig.savefig(f"figures/ising_L{L}.png", dpi=120)
 plt.show()

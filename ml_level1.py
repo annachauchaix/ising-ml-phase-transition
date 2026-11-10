@@ -34,7 +34,7 @@ X_far, y_far = X[far], y[far]
 X_train, X_test, y_train, y_test = train_test_split(
     X_far, y_far, test_size=0.2, random_state=42, stratify=y_far)
 
-model = LogisticRegression()
+model = LogisticRegression(class_weight="balanced")
 model.fit(X_train, y_train)
 
 accuracy = accuracy_score(y_test, model.predict(X_test))
@@ -47,9 +47,12 @@ p_ordered = model.predict_proba(X)[:, 1]     # probability of "ordered"
 temps = np.unique(T)                         # each temperature once, sorted
 p_mean = np.array([p_ordered[T == t].mean() for t in temps])
 
-# Tc = where the mean probability crosses 0.5 (linear interpolation)
-# p goes from 1 (cold) to 0 (hot); np.interp needs increasing x, so we flip
-Tc_model = np.interp(0.5, p_mean[::-1], temps[::-1])
+# Tc = first point (from the cold side) where the mean probability drops below 0.5
+for k in range(len(temps) - 1):
+    if p_mean[k] >= 0.5 > p_mean[k + 1]:
+        # linear interpolation between the two neighbouring points
+        Tc_model = temps[k] + (p_mean[k] - 0.5) / (p_mean[k] - p_mean[k + 1]) * (temps[k + 1] - temps[k])
+        break
 print(f"\nTc from the model (p = 0.5): {Tc_model:.3f}")
 print(f"Tc exact (Onsager):          {TC_EXACT}")
 
@@ -65,5 +68,5 @@ plt.ylabel("Probability of ordered phase")
 plt.title(f"Logistic regression on |m|, L = {L}")
 plt.legend()
 plt.tight_layout()
-plt.savefig(f"ml_level1_L{L}.png", dpi=120)
+plt.savefig(f"figures/ml_level1_L{L}.png", dpi=120)
 plt.show()

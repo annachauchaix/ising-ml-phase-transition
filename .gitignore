@@ -222,3 +222,4 @@ __marimo__/
 *.png
 *.dat
 *.npz
+!figures/*.png
