@@ -1,22 +1,42 @@
 # Machine learning finds the phase transition in the 2D Ising model
 
-A physicist's bridge project: Monte Carlo simulation (my PhD toolbox) + machine learning (scikit-learn) applied to the same problem. The question: Сan a model find the critical temperature without being told any physics?
+A physicist's bridge project: Monte Carlo simulation (my PhD toolbox) and machine learning (scikit-learn) applied to the same problem.
 
-![Monte Carlo results](figures/ising_L16.png)
+**The question:** can a model find the critical temperature without being told any physics?
 
 ## The physics
 
-The 2D Ising model is the simplest model of a magnet: spins ±1 on an L×L square lattice with periodic boundaries, H = −J Σ sᵢsⱼ. Below the critical temperature the spins order (ferromagnet), above it thermal noise wins (paramagnet). The exact answer is known (Onsager 1944): Tc = 2.269 (J = 1, k_B = 1), which makes this model a perfect benchmark.
+The 2D Ising model is the simplest model of a magnet: spins $s_i = \pm 1$ on an $L \times L$ square lattice with periodic boundary conditions.
+
+![Schematic of the 2D Ising model](figures/ising_schematic.png)
+
+Without an external magnetic field, the Hamiltonian of the system is
+
+$$H = -J \sum_{\langle i,j \rangle} s_i s_j$$
+
+where $J > 0$ is the isotropic exchange constant, the sum runs over nearest-neighbour spin pairs, and $s_i$ is the spin at site $i$.
+
+Below the critical temperature the spins align (ferromagnet). Above it, thermal noise wins and the spins are disordered (paramagnet). The exact answer is known (Onsager, 1944): **Tc = 2.269** (in units with J = 1, k_B = 1). This makes the model a perfect benchmark.
 
 ## What is in the project
 
-**1. Monte Carlo simulation** (`ising_mc.py`) — Metropolis algorithm, temperature scan from hot to cold, 10 independent runs with different seeds for error bars. Observables: |m|, energy, heat capacity C, susceptibility χ. Tc is located from the peaks of C and χ.
+### 1. Monte Carlo simulation (`ising_mc.py`)
 
-**2. Finite-size check** (`plot_sizes.py`) — the same scan for L = 8, 16, 32: the peaks grow and move toward the exact Tc as L grows, as expected for a true phase transition.
+Metropolis algorithm, temperature scan from hot to cold with a finer step near Tc, and 10 independent runs with different seeds for error bars. Observables: |m|, energy, heat capacity C and susceptibility χ. Tc is located from the peaks of C and χ.
 
-**3. Machine learning** (`ml_level1.py`) — logistic regression trained on lattice snapshots labelled "ordered / disordered". The model is trained **only far from the transition** (T < 2.0 and T > 2.6), then asked about all temperatures. The temperature where its predicted probability crosses 50% is the model's estimate of Tc — it reconstructs the transition in a region it has never seen.
+![Monte Carlo results for L = 16](figures/ising_L16.png)
 
-![ML result](figures/ml_level1_L16.png)
+### 2. Finite-size check (`plot_sizes.py`)
+
+The same scan for L = 8, 16 and 32. The susceptibility peak grows with L and moves toward the exact Tc (2.48 → 2.46 → 2.32), as expected for a true phase transition.
+
+![Heat capacity and susceptibility for L = 8, 16, 32](figures/ising_sizes.png)
+
+### 3. Machine learning (`ml_level1.py`)
+
+Logistic regression trained on 4,900 lattice snapshots labelled "ordered" or "disordered", with a train/test split and balanced class weights. The model is trained **only far from the transition** (T < 2.0 and T > 2.6), then asked about all temperatures. The temperature where its predicted probability crosses 50% is the model's estimate of Tc: it reconstructs the transition in a region it has never seen.
+
+![Logistic regression: probability of the ordered phase vs temperature](figures/ml_level1_L16.png)
 
 ## Results
 
@@ -24,40 +44,37 @@ The 2D Ising model is the simplest model of a magnet: spins ±1 on an L×L squar
 |---|---|---|
 | Peak of heat capacity C | 2.292 ± 0.016 | 2.270 ± 0.011 |
 | Peak of susceptibility χ | 2.346 ± 0.021 | 2.304 ± 0.013 |
-| Logistic regression (p = 0.5) | 2.31 | — |
-| **Exact (Onsager)** | **2.269** (infinite lattice) | |
+| Logistic regression (p = 0.5), test accuracy 98% | 2.31 | — |
+| **Exact (Onsager, infinite lattice)** | **2.269** | **2.269** |
 
-On a finite lattice the transition is smeared and the apparent Tc is shifted
-upward — the results agree with the exact value within finite-size effects.
+On a finite lattice the transition is smeared and the apparent Tc is shifted upward. The results agree with the exact value within finite-size effects.
 
 ## How to run
 
 ```bash
 pip install -r requirements.txt
-python ising_mc.py        # ~15 min for L = 16: scan + snapshots_L16.npz
+python ising_mc.py        # ~4 min for L = 16 (~15 min for L = 32): scan + snapshots_L16.npz
 python ml_level1.py       # trains the model on the snapshots, ~1 s
-python plot_sizes.py      # after running ising_mc.py for L = 8, 16, 32
+python plot_sizes.py      # after running ising_mc.py for L = 8, 16 and 32
 ```
 
 All random seeds are fixed, so the numbers above are exactly reproducible.
 
 ## Validation and honest limitations
 
-- The simulation is checked against exact results: e(T = 1.5) = −1.950 vs
-  Onsager's −1.951; |m|(T) follows Yang's exact curve.
-- Snapshots 20 sweeps apart are correlated near Tc (autocorrelation time
-  ~40 sweeps there), so the test accuracy is slightly optimistic.
-- The ML estimate of Tc depends mildly on the training window (±0.03); it is
-  a demonstration of the method, not a precision measurement.
+- The simulation is checked against the exact solution: the energy per spin at T = 1.5 is −1.950, vs −1.951 from Onsager's formula.
+- For the Ising model, ML is not *needed* to find Tc: the peaks of C and χ already give it. The ML part is a test of the method on a problem with a known answer, which is the first step before using it where the order parameter is unknown.
+- The model sees |m|, a quantity chosen by a physicist, so it only has to learn a threshold. Removing this hint is the next step (see Roadmap).
+- The ML estimate of Tc depends mildly on the training window (about ±0.03). It is a demonstration of the method, not a precision measurement.
+- Snapshots 20 sweeps apart are correlated near Tc (autocorrelation time about 40 sweeps there), so the test accuracy is slightly optimistic.
 
 ## Roadmap
 
-- [ ] Logistic regression on raw spins: the Z2 symmetry trap (77% → 99%)
-- [ ] Unsupervised: PCA rediscovers the order parameter
+- [ ] Logistic regression on raw spins: the Z2 symmetry trap (a linear model drops to the 72% baseline, aligning the sign brings it back to 99%)
+- [ ] Unsupervised learning: PCA rediscovers the order parameter without labels
 - [ ] Finite-size scaling of the ML estimate of Tc
 
 ## References
 
-- L. Onsager, Phys. Rev. 65, 117 (1944) — exact solution
-- J. Carrasquilla & R. Melko, *Machine learning phases of matter*,
-  Nature Physics 13, 431 (2017) — the idea of this project
+- L. Onsager, *Crystal statistics. I. A two-dimensional model with an order-disorder transition*, Phys. Rev. 65, 117 (1944) — exact solution
+- J. Carrasquilla & R. G. Melko, *Machine learning phases of matter*, Nature Physics 13, 431 (2017) — the idea of this project
